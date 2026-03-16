@@ -63,6 +63,9 @@ All these features and more make **NextAdmin** a robust, well-rounded solution f
 
 ## Update Logs
 
+### Version 1.2.3 - [Mar 16, 2026]
+- Update Next.js to ^16.1.6 and configure image qualities
+
 ### Version 1.2.2 - [December 01, 2025]
 - Updated to Next.js 16
 - Updated dependencies.
