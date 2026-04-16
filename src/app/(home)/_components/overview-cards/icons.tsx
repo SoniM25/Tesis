@@ -71,3 +71,16 @@ export function Users(props: SVGPropsType) {
     </svg>
   );
 }
+export function Location(props: SVGPropsType) {
+  return (
+    <svg width={58} height={58} viewBox="0 0 58 58" fill="none" {...props}>
+      <circle cx={29} cy={29} r={29} fill="#FF5555" /> {/* Color rojo para ubicación */}
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M29 18c-3.86 0-7 3.14-7 7 0 5.25 7 13 7 13s7-7.75 7-13c0-3.86-3.14-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z"
+        fill="#fff"
+      />
+    </svg>
+  );
+}
