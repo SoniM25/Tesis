@@ -20,7 +20,7 @@ export const NAV_DATA = [
         icon: Icons.Calendar,
         items: [],
       },
-      {
+      /*{
         title: "Profile",
         url: "/profile",
         icon: Icons.User,
@@ -60,11 +60,11 @@ export const NAV_DATA = [
             url: "/pages/settings",
           },
         ],
-      },
+      },*/
     ],
   },
   {
-    label: "OTHERS",
+    //label: "OTHERS",
     items: [
       {
         title: "Charts",
