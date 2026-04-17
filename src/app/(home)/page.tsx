@@ -1,7 +1,7 @@
 import { IrradianceOverview } from "@/components/Charts/irradiance-chart";
 import { TemperatureOverview } from "@/components/Charts/temperature-chart";
+import { CloudCover } from "@/components/Charts/cloud-cover";
 import { MexicoMap } from "@/components/Charts/mexico-map";
-import { UsedDevices } from "@/components/Charts/used-devices";
 import { TopChannels } from "@/components/Tables/top-channels";
 import { TopChannelsSkeleton } from "@/components/Tables/top-channels/skeleton";
 import { createTimeFrameExtractor } from "@/utils/timeframe-extractor";
@@ -43,10 +43,12 @@ export default async function Home({ searchParams }: PropsType) {
           className="col-span-12 xl:col-span-5"
         />
 
-        <UsedDevices
+        <CloudCover
           className="col-span-12 xl:col-span-5"
-          key={extractTimeFrame("used_devices")}
-          timeFrame={extractTimeFrame("used_devices")?.split(":")[1]}
+          key={extractTimeFrame("cloud_cover")}
+          timeFrame={
+            extractTimeFrame("cloud_cover")?.split(":")[1] || "monthly"
+          }
         />
 
         <MexicoMap />

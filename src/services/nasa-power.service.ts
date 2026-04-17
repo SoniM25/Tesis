@@ -1,8 +1,8 @@
 // NASA POWER API Service para obtener datos de irradiancia y temperatura
 // Ubicación: Apizaco, Tlaxcala, México (19.4167, -98.1333)
 
-const APIZACO_LAT = 19.4167;
-const APIZACO_LON = -98.1333;
+const APIZACO_LAT = 19.417966;
+const APIZACO_LON = -98.126993;
 const NASA_POWER_API = "https://power.larc.nasa.gov/api/temporal";
 
 type TimeFrame = "hourly" | "daily" | "weekly" | "monthly" | "yearly";
@@ -398,4 +398,77 @@ function generateMockTemperatureData(timeFrame: TimeFrame) {
   const min = avg.map((d) => ({ ...d, y: d.y - 5 - Math.random() * 2 }));
 
   return { average: avg, max, min };
+}
+export async function getCloudCoverData(timeFrame: TimeFrame = "monthly") {
+  try {
+    const { start, end } = getDateRange(timeFrame);
+
+    // CLOUD_AMT = Cloud Amount/Coverage (%)
+    const url = `${NASA_POWER_API}/daily/point?parameters=CLOUD_AMT&community=RE&longitude=${APIZACO_LON}&latitude=${APIZACO_LAT}&start=${start}&end=${end}&format=JSON`;
+
+    const response = await fetch(url, { next: { revalidate: 3600 } });
+
+    if (!response.ok) {
+      console.error("NASA POWER API error:", response.status);
+      return generateMockCloudData(timeFrame);
+    }
+
+    const data: NasaPowerResponse = await response.json();
+    const cloudData = data.properties?.parameter?.CLOUD_AMT;
+
+    if (!cloudData) {
+      return generateMockCloudData(timeFrame);
+    }
+
+    return processCloudData(cloudData, timeFrame);
+  } catch (error) {
+    console.error("Error fetching cloud data:", error);
+    return generateMockCloudData(timeFrame);
+  }
+}
+
+// Procesar datos de nubosidad
+function processCloudData(data: Record<string, number>, timeFrame: TimeFrame) {
+  const entries = Object.entries(data).filter(([, value]) => value !== -999);
+
+  // Categorizar nubosidad: Despejado (0-25%), Parcial (25-50%), Nublado (50-75%), Muy Nublado (75-100%)
+  const categories = {
+    "Despejado": 0,
+    "Parcialmente Nublado": 0,
+    "Nublado": 0,
+    "Muy Nublado": 0
+  };
+
+  entries.forEach(([, value]) => {
+    if (value <= 25) {
+      categories["Despejado"]++;
+    } else if (value <= 50) {
+      categories["Parcialmente Nublado"]++;
+    } else if (value <= 75) {
+      categories["Nublado"]++;
+    } else {
+      categories["Muy Nublado"]++;
+    }
+  });
+
+  const total = entries.length;
+
+  return [
+    { name: "Despejado", percentage: categories["Despejado"] / total, amount: categories["Despejado"] },
+    { name: "Parcial", percentage: categories["Parcialmente Nublado"] / total, amount: categories["Parcialmente Nublado"] },
+    { name: "Nublado", percentage: categories["Nublado"] / total, amount: categories["Nublado"] },
+    { name: "Muy Nublado", percentage: categories["Muy Nublado"] / total, amount: categories["Muy Nublado"] },
+  ];
+}
+
+// Datos mock de nubosidad
+function generateMockCloudData(timeFrame: TimeFrame) {
+  const multiplier = timeFrame === "yearly" ? 12 : 1;
+
+  return [
+    { name: "Despejado", percentage: 0.35, amount: Math.round(35 * multiplier) },
+    { name: "Parcial", percentage: 0.30, amount: Math.round(30 * multiplier) },
+    { name: "Nublado", percentage: 0.25, amount: Math.round(25 * multiplier) },
+    { name: "Muy Nublado", percentage: 0.10, amount: Math.round(10 * multiplier) },
+  ];
 }
