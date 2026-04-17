@@ -1,6 +1,7 @@
-import { PaymentsOverview } from "@/components/Charts/payments-overview";
+import { IrradianceOverview } from "@/components/Charts/irradiance-chart";
+import { TemperatureOverview } from "@/components/Charts/temperature-chart";
+import { MexicoMap } from "@/components/Charts/mexico-map";
 import { UsedDevices } from "@/components/Charts/used-devices";
-import { WeeksProfit } from "@/components/Charts/weeks-profit";
 import { TopChannels } from "@/components/Tables/top-channels";
 import { TopChannelsSkeleton } from "@/components/Tables/top-channels/skeleton";
 import { createTimeFrameExtractor } from "@/utils/timeframe-extractor";
@@ -8,7 +9,6 @@ import { Suspense } from "react";
 import { ChatsCard } from "./_components/chats-card";
 import { OverviewCardsGroup } from "./_components/overview-cards";
 import { OverviewCardsSkeleton } from "./_components/overview-cards/skeleton";
-import { RegionLabels } from "./_components/region-labels";
 
 type PropsType = {
   searchParams: Promise<{
@@ -27,15 +27,19 @@ export default async function Home({ searchParams }: PropsType) {
       </Suspense>
 
       <div className="mt-4 grid grid-cols-12 gap-4 md:mt-6 md:gap-6 2xl:mt-9 2xl:gap-7.5">
-        <PaymentsOverview
+        <IrradianceOverview
           className="col-span-12 xl:col-span-7"
-          key={extractTimeFrame("payments_overview")}
-          timeFrame={extractTimeFrame("payments_overview")?.split(":")[1]}
+          key={extractTimeFrame("irradiance_overview")}
+          timeFrame={
+            extractTimeFrame("irradiance_overview")?.split(":")[1] || "monthly"
+          }
         />
 
-        <WeeksProfit
-          key={extractTimeFrame("weeks_profit")}
-          timeFrame={extractTimeFrame("weeks_profit")?.split(":")[1]}
+        <TemperatureOverview
+          key={extractTimeFrame("temperature_overview")}
+          timeFrame={
+            extractTimeFrame("temperature_overview")?.split(":")[1] || "monthly"
+          }
           className="col-span-12 xl:col-span-5"
         />
 
@@ -45,7 +49,7 @@ export default async function Home({ searchParams }: PropsType) {
           timeFrame={extractTimeFrame("used_devices")?.split(":")[1]}
         />
 
-        <RegionLabels />
+        <MexicoMap />
 
         <div className="col-span-12 grid xl:col-span-8">
           <Suspense fallback={<TopChannelsSkeleton />}>

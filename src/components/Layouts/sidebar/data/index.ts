@@ -11,14 +11,14 @@ export const NAV_DATA = [
         items: [],
       },
       {
-        title: "Calendar",
+        title: "Datos historicos",
         url: "/calendar",
         icon: Icons.Calendar,
         items: [],
       },
 
       {
-        title: "Charts",
+        title: "Mejores momentos",
         icon: Icons.PieChart,
         items: [
           {
@@ -28,7 +28,7 @@ export const NAV_DATA = [
         ],
       },
       {
-        title: "UI Elements",
+        title: "Glosario",
         icon: Icons.FourCircle,
         items: [
           {
@@ -41,7 +41,7 @@ export const NAV_DATA = [
           },
         ],
       },
-      {
+      /*{
         title: "Authentication",
         icon: Icons.Authentication,
         items: [
@@ -50,7 +50,7 @@ export const NAV_DATA = [
             url: "/auth/sign-in",
           },
         ],
-      },
+      },*/
     ],
   },
 ];
