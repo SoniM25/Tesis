@@ -21,9 +21,9 @@ export function Header() {
       </button>
 
       {isMobile && (
-        <Link href={"/"} className="ml-2 max-[430px]:hidden min-[375px]:ml-4">
+        <Link href={"/SCAR.png"} className="ml-2 max-[430px]:hidden min-[375px]:ml-4">
           <Image
-            src={"/images/logo/logo-icon.svg"}
+            src={"/"}
             width={32}
             height={32}
             alt=""
@@ -37,7 +37,7 @@ export function Header() {
           SCARRH
         </h1>
         <p className="font-medium">
-          Sistema de Control y Análisis de Recursos de Radiación y Humedad
+
         </p>
       </div>
 
