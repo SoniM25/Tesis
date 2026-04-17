@@ -84,3 +84,33 @@ export function Location(props: SVGPropsType) {
     </svg>
   );
 }
+
+export function Sun(props: SVGPropsType) {
+  return (
+    <svg width={58} height={58} viewBox="0 0 58 58" fill="none" {...props}>
+      {/* Círculo de fondo amarillo/naranja */}
+      <circle cx={29} cy={29} r={29} fill="#FFD700" />
+
+      {/* Círculo central blanco del sol */}
+      <circle cx={29} cy={29} r={8} fill="#fff" />
+
+      {/* Rayos alineados perfectamente al centro */}
+      <g stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
+        {/* Rayo Superior */}
+        <line x1="29" y1="14" x2="29" y2="18" />
+        {/* Rayo Inferior */}
+        <line x1="29" y1="40" x2="29" y2="44" />
+        {/* Rayo Izquierdo */}
+        <line x1="14" y1="29" x2="18" y2="29" />
+        {/* Rayo Derecho */}
+        <line x1="40" y1="29" x2="44" y2="29" />
+
+        {/* Rayos Diagonales */}
+        <line x1="18.4" y1="18.4" x2="21.2" y2="21.2" />
+        <line x1="36.8" y1="36.8" x2="39.6" y2="39.6" />
+        <line x1="39.6" y1="18.4" x2="36.8" y2="21.2" />
+        <line x1="21.2" y1="36.8" x2="18.4" y2="39.6" />
+      </g>
+    </svg>
+  );
+}

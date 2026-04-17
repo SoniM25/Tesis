@@ -11,8 +11,8 @@ export async function OverviewCardsGroup() {
       <OverviewCard
         label="17/04/2026"
         data={{
-          ...views,
-          value: compactFormat(views.value),
+          value: "Fecha",
+          growthRate: 0,
         }}
         Icon={icons.Views}
       />
@@ -22,25 +22,26 @@ export async function OverviewCardsGroup() {
         data={{
           value: "Latitud, Longitud°",
           growthRate: 0,
-
         }}
         Icon={icons.Location}
       />
 
       <OverviewCard
-        label="Potencia pv"
+        label="kWp"
         data={{
           ...products,
-          value: compactFormat(products.value),
+          value: "Potencia PV",
+          growthRate: "" as any,
         }}
-        Icon={icons.Product}
+        Icon={icons.Sun}
       />
 
       <OverviewCard
-        label="Orientación e Inclinación"
+        label="°"
         data={{
           ...users,
-          value: compactFormat(users.value),
+          value: "Orientación e Inclinación",
+          growthRate:"" as any, //orientacion de paneles solares en México
         }}
         Icon={icons.Users}
       />
