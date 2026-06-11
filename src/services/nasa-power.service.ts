@@ -5,7 +5,7 @@ const APIZACO_LON = -98.126993;
 const NASA_POWER_API = "https://power.larc.nasa.gov/api/temporal";
 
 // Añadimos "custom" para el manejo dinámico del calendario histórico
-type TimeFrame =
+export type TimeFrame =
   | "hourly"
   | "daily"
   | "weekly"
@@ -109,30 +109,32 @@ export async function getIrradianceData(
   try {
     // 🔒 CANDADO DE SEGURIDAD TOPE 2025
     if (timeFrame === "custom" && anio && anio >= 2026) {
-      return [];
+      return generateMockIrradianceData(timeFrame);
     }
 
     const { start, end } = getDateRange(timeFrame, anio, mes);
-
     const url = `${NASA_POWER_API}/daily/point?parameters=ALLSKY_SFC_SW_DWN&community=RE&longitude=${APIZACO_LON}&latitude=${APIZACO_LAT}&start=${start}&end=${end}&format=JSON`;
 
-    const response = await fetch(url, { next: { revalidate: 3600 } });
+    const response = await fetch(url, {
+      next: { revalidate: 3600 },
+      mode: 'cors'
+    });
 
     if (!response.ok) {
-      console.error("NASA POWER API error:", response.status);
+      console.warn(`NASA API Irradiance respondió con estatus: ${response.status}. Usando datos de respaldo.`);
       return generateMockIrradianceData(timeFrame);
     }
 
     const data: NasaPowerResponse = await response.json();
     const irradianceData = data.properties?.parameter?.ALLSKY_SFC_SW_DWN;
 
-    if (!irradianceData) {
+    if (!irradianceData || Object.keys(irradianceData).length === 0) {
       return generateMockIrradianceData(timeFrame);
     }
 
     return processIrradianceData(irradianceData, timeFrame);
   } catch (error) {
-    console.error("Error fetching irradiance data:", error);
+    console.error("Error crítico al obtener irradiancia (usando mock):", error);
     return generateMockIrradianceData(timeFrame);
   }
 }
@@ -146,17 +148,19 @@ export async function getTemperatureData(
   try {
     // 🔒 CANDADO DE SEGURIDAD TOPE 2025
     if (timeFrame === "custom" && anio && anio >= 2026) {
-      return { average: [], max: [], min: [] };
+      return generateMockTemperatureData(timeFrame);
     }
 
     const { start, end } = getDateRange(timeFrame, anio, mes);
-
     const url = `${NASA_POWER_API}/daily/point?parameters=T2M,T2M_MAX,T2M_MIN&community=RE&longitude=${APIZACO_LON}&latitude=${APIZACO_LAT}&start=${start}&end=${end}&format=JSON`;
 
-    const response = await fetch(url, { next: { revalidate: 3600 } });
+    const response = await fetch(url, {
+      next: { revalidate: 3600 },
+      mode: 'cors'
+    });
 
     if (!response.ok) {
-      console.error("NASA POWER API error:", response.status);
+      console.warn(`NASA API Temperatura respondió con estatus: ${response.status}. Usando datos de respaldo.`);
       return generateMockTemperatureData(timeFrame);
     }
 
@@ -171,8 +175,47 @@ export async function getTemperatureData(
 
     return processTemperatureData(tempData, tempMax, tempMin, timeFrame);
   } catch (error) {
-    console.error("Error fetching temperature data:", error);
+    console.error("Error crítico al obtener temperatura (usando mock):", error);
     return generateMockTemperatureData(timeFrame);
+  }
+}
+
+// Obtener nubosidad desde NASA POWER
+export async function getCloudCoverData(
+  timeFrame: TimeFrame = "monthly",
+  anio?: number,
+  mes?: string,
+) {
+  try {
+    // 🔒 CANDADO DE SEGURIDAD TOPE 2025
+    if (timeFrame === "custom" && anio && anio >= 2026) {
+      return generateMockCloudData(timeFrame);
+    }
+
+    const { start, end } = getDateRange(timeFrame, anio, mes);
+    const url = `${NASA_POWER_API}/daily/point?parameters=CLOUD_AMT&community=RE&longitude=${APIZACO_LON}&latitude=${APIZACO_LAT}&start=${start}&end=${end}&format=JSON`;
+
+    const response = await fetch(url, {
+      next: { revalidate: 3600 },
+      mode: 'cors'
+    });
+
+    if (!response.ok) {
+      console.warn(`NASA API Nubosidad respondió con estatus: ${response.status}. Usando datos de respaldo.`);
+      return generateMockCloudData(timeFrame);
+    }
+
+    const data: NasaPowerResponse = await response.json();
+    const cloudData = data.properties?.parameter?.CLOUD_AMT;
+
+    if (!cloudData) {
+      return generateMockCloudData(timeFrame);
+    }
+
+    return processCloudData(cloudData);
+  } catch (error) {
+    console.error("Error crítico al obtener nubosidad (usando mock):", error);
+    return generateMockCloudData(timeFrame);
   }
 }
 
@@ -291,18 +334,8 @@ function formatDateLabel(dateStr: string, type: string): string {
   const day = dateStr.substring(6, 8);
 
   const monthNames = [
-    "Ene",
-    "Feb",
-    "Mar",
-    "Abr",
-    "May",
-    "Jun",
-    "Jul",
-    "Ago",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dic",
+    "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+    "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
   ];
 
   switch (type) {
@@ -320,9 +353,9 @@ function formatDateLabel(dateStr: string, type: string): string {
 function aggregateByWeek(entries: [string, number][]) {
   const weeks: { [key: string]: number[] } = {};
 
-  entries.forEach(([date, value]) => {
+  entries.forEach(([date, value]: [string, number]) => {
     const d = new Date(
-      `${date.substring(0, 4)}-${date.substring(4, 6)}-${date.substring(6, 8)}`,
+      `${date.substring(0, 4)}-${date.substring(4, 6)}-${date.substring(6, 8)}`
     );
     const weekNum = getWeekNumber(d);
     const key = `Sem ${weekNum}`;
@@ -341,21 +374,11 @@ function aggregateByWeek(entries: [string, number][]) {
 function aggregateByMonth(entries: [string, number][]) {
   const months: { [key: string]: number[] } = {};
   const monthNames = [
-    "Ene",
-    "Feb",
-    "Mar",
-    "Abr",
-    "May",
-    "Jun",
-    "Jul",
-    "Ago",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dic",
+    "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+    "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
   ];
 
-  entries.forEach(([date, value]) => {
+  entries.forEach(([date, value]: [string, number]) => {
     const month = parseInt(date.substring(4, 6)) - 1;
     const key = monthNames[month];
     if (!months[key]) months[key] = [];
@@ -371,7 +394,7 @@ function aggregateByMonth(entries: [string, number][]) {
 function aggregateByYear(entries: [string, number][]) {
   const years: { [key: string]: number[] } = {};
 
-  entries.forEach(([date, value]) => {
+  entries.forEach(([date, value]: [string, number]) => {
     const year = date.substring(0, 4);
     if (!years[year]) years[year] = [];
     years[year].push(value);
@@ -451,18 +474,8 @@ function generateMockIrradianceData(timeFrame: TimeFrame) {
       break;
     case "monthly":
       const months = [
-        "Ene",
-        "Feb",
-        "Mar",
-        "Abr",
-        "May",
-        "Jun",
-        "Jul",
-        "Ago",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dic",
+        "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+        "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
       ];
       months.forEach((month) => {
         mockData.push({
@@ -475,7 +488,7 @@ function generateMockIrradianceData(timeFrame: TimeFrame) {
       for (let i = 2021; i <= 2025; i++)
         mockData.push({
           x: i.toString(),
-          y: Math.round((5 + Math.random() * 1) * 100) / 100,
+          y: Math.round((5 + Math.random()) * 100) / 100,
         });
       break;
   }
@@ -500,13 +513,7 @@ function generateMockTemperatureData(timeFrame: TimeFrame) {
       case "daily":
       case "custom":
         const days = [
-          "01/12",
-          "02/12",
-          "03/12",
-          "04/12",
-          "05/12",
-          "06/12",
-          "07/12",
+          "01/12", "02/12", "03/12", "04/12", "05/12", "06/12", "07/12",
         ];
         days.forEach((day) => {
           data.push({
@@ -524,18 +531,8 @@ function generateMockTemperatureData(timeFrame: TimeFrame) {
         break;
       case "monthly":
         const months = [
-          "Ene",
-          "Feb",
-          "Mar",
-          "Abr",
-          "May",
-          "Jun",
-          "Jul",
-          "Ago",
-          "Sep",
-          "Oct",
-          "Nov",
-          "Dic",
+          "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+          "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
         ];
         const baseTemps = [12, 14, 16, 18, 20, 19, 18, 18, 17, 15, 13, 12];
         months.forEach((month, i) => {
@@ -564,34 +561,7 @@ function generateMockTemperatureData(timeFrame: TimeFrame) {
   return { average: avg, max, min };
 }
 
-export async function getCloudCoverData(timeFrame: TimeFrame = "monthly") {
-  try {
-    const { start, end } = getDateRange(timeFrame);
-
-    const url = `${NASA_POWER_API}/daily/point?parameters=CLOUD_AMT&community=RE&longitude=${APIZACO_LON}&latitude=${APIZACO_LAT}&start=${start}&end=${end}&format=JSON`;
-
-    const response = await fetch(url, { next: { revalidate: 3600 } });
-
-    if (!response.ok) {
-      console.error("NASA POWER API error:", response.status);
-      return generateMockCloudData(timeFrame);
-    }
-
-    const data: NasaPowerResponse = await response.json();
-    const cloudData = data.properties?.parameter?.CLOUD_AMT;
-
-    if (!cloudData) {
-      return generateMockCloudData(timeFrame);
-    }
-
-    return processCloudData(cloudData, timeFrame);
-  } catch (error) {
-    console.error("Error fetching cloud data:", error);
-    return generateMockCloudData(timeFrame);
-  }
-}
-
-function processCloudData(data: Record<string, number>, timeFrame: TimeFrame) {
+function processCloudData(data: Record<string, number>) {
   const entries = Object.entries(data).filter(([, value]) => value !== -999);
 
   const categories = {
@@ -608,7 +578,7 @@ function processCloudData(data: Record<string, number>, timeFrame: TimeFrame) {
     else categories["Muy Nublado"]++;
   });
 
-  const total = entries.length;
+  const total = entries.length || 1;
 
   return [
     {
