@@ -44,7 +44,8 @@ function MapController() {
   const map = useMap();
 
   useEffect(() => {
-    map.setView(APIZACO_COORDS, 6);
+    // CAMBIO AQUÍ: Cambiamos el zoom de 6 a 11.5 para enfocar la región de Tlaxcala/Apizaco
+    map.setView(APIZACO_COORDS, 11.5);
   }, [map]);
 
   return null;
@@ -69,7 +70,7 @@ export default function MexicoMapComponent() {
     <div className="h-[422px] overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
       <MapContainer
         center={APIZACO_COORDS}
-        zoom={6}
+        zoom={11.5} // CAMBIO AQUÍ: Cambiamos el zoom inicial también para evitar parpadeos
         style={{ height: "100%", width: "100%" }}
         scrollWheelZoom={true}
       >
@@ -90,7 +91,7 @@ export default function MexicoMapComponent() {
               </div>
               <div className="mt-2 border-t border-gray-200 pt-2">
                 <p className="text-xs font-medium text-amber-600">
-                  📊 Estación de monitoreo solar
+                  Estación de monitoreo solar
                 </p>
               </div>
             </div>

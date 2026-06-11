@@ -1,57 +1,98 @@
-// NASA POWER API Service para obtener datos de irradiancia y temperatura
-// Ubicación: Apizaco, Tlaxcala, México (19.4167, -98.1333)
+// Usando NASA POWER
 
 const APIZACO_LAT = 19.417966;
 const APIZACO_LON = -98.126993;
 const NASA_POWER_API = "https://power.larc.nasa.gov/api/temporal";
 
-type TimeFrame = "hourly" | "daily" | "weekly" | "monthly" | "yearly";
+// Añadimos "custom" para el manejo dinámico del calendario histórico
+type TimeFrame =
+  | "hourly"
+  | "daily"
+  | "weekly"
+  | "monthly"
+  | "yearly"
+  | "custom";
 
 interface NasaPowerResponse {
   properties: {
     parameter: {
       ALLSKY_SFC_SW_DWN?: Record<string, number>;
       T2M?: Record<string, number>;
+      T2M_MAX?: Record<string, number>;
+      T2M_MIN?: Record<string, number>;
+      CLOUD_AMT?: Record<string, number>;
       [key: string]: Record<string, number> | undefined;
     };
   };
 }
 
-// Función auxiliar para obtener fechas según el período
-function getDateRange(timeFrame: TimeFrame): { start: string; end: string } {
+// Obtener fechas según el período o selección exacta del calendario
+function getDateRange(
+  timeFrame: TimeFrame,
+  anio?: number,
+  mes?: string,
+): { start: string; end: string } {
+  // 🔒 FORZAMOS QUE LA FECHA DE REFERENCIA MÁXIMA DEL SISTEMA SEA EL CIERRE DE 2025
   const now = new Date();
+  if (now.getFullYear() >= 2026) {
+    now.setFullYear(2025, 11, 31); // 11 = Diciembre, 31 = Día
+  }
+
   let start: Date;
   let end: Date = new Date(now);
 
-  switch (timeFrame) {
-    case "hourly":
-      start = new Date(now);
-      start.setDate(start.getDate() - 1);
-      break;
-    case "daily":
-      start = new Date(now);
-      start.setDate(start.getDate() - 7);
-      break;
-    case "weekly":
-      start = new Date(now);
-      start.setMonth(start.getMonth() - 1);
-      break;
-    case "monthly":
-      start = new Date(now);
-      start.setFullYear(start.getFullYear() - 1);
-      break;
-    case "yearly":
-      start = new Date(now);
-      start.setFullYear(start.getFullYear() - 5);
-      break;
-    default:
-      start = new Date(now);
-      start.setMonth(start.getMonth() - 1);
+  // LÓGICA PARA EL CALENDARIO HISTÓRICO (Modo custom)
+  if (timeFrame === "custom" && anio && mes) {
+    const indiceMes = parseInt(mes) - 1;
+
+    start = new Date(anio, indiceMes, 1);
+    end = new Date(anio, indiceMes + 1, 0);
+
+    const fechaLimiteMax = new Date(2025, 11, 31);
+
+    if (start > fechaLimiteMax) {
+      start = new Date(2025, 11, 31);
+      end = new Date(2025, 11, 31);
+    } else if (end > fechaLimiteMax) {
+      end = new Date(2025, 11, 31);
+    }
+  } else {
+    // Al haber alterado "now" arriba, este switch calculará en base a 2025 de forma automática
+    switch (timeFrame) {
+      case "hourly":
+        start = new Date(now);
+        start.setDate(start.getDate() - 1);
+        break;
+      case "daily":
+        start = new Date(now);
+        start.setDate(start.getDate() - 7);
+        break;
+      case "weekly":
+        start = new Date(now);
+        start.setMonth(start.getMonth() - 1);
+        break;
+      case "monthly":
+        start = new Date(now);
+        start.setFullYear(start.getFullYear() - 1);
+        break;
+      case "yearly":
+        start = new Date(now);
+        start.setFullYear(start.getFullYear() - 4);
+        break;
+      default:
+        start = new Date(now);
+        start.setMonth(start.getMonth() - 1);
+    }
+    end = new Date(now);
   }
 
-  end.setDate(end.getDate() - 3);
-
-  const formatDate = (d: Date) => d.toISOString().split("T")[0].replace(/-/g, "");
+  // Formateador helper: Transforma a YYYYMMDD
+  const formatDate = (d: Date) => {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}${mm}${dd}`;
+  };
 
   return {
     start: formatDate(start),
@@ -59,10 +100,19 @@ function getDateRange(timeFrame: TimeFrame): { start: string; end: string } {
   };
 }
 
-// Obtener datos de irradiancia desde NASA POWER
-export async function getIrradianceData(timeFrame: TimeFrame = "monthly") {
+// Obtener irradiancia desde NASA POWER
+export async function getIrradianceData(
+  timeFrame: TimeFrame = "monthly",
+  anio?: number,
+  mes?: string,
+) {
   try {
-    const { start, end } = getDateRange(timeFrame);
+    // 🔒 CANDADO DE SEGURIDAD TOPE 2025
+    if (timeFrame === "custom" && anio && anio >= 2026) {
+      return [];
+    }
+
+    const { start, end } = getDateRange(timeFrame, anio, mes);
 
     const url = `${NASA_POWER_API}/daily/point?parameters=ALLSKY_SFC_SW_DWN&community=RE&longitude=${APIZACO_LON}&latitude=${APIZACO_LAT}&start=${start}&end=${end}&format=JSON`;
 
@@ -87,10 +137,19 @@ export async function getIrradianceData(timeFrame: TimeFrame = "monthly") {
   }
 }
 
-// Obtener datos de temperatura desde NASA POWER
-export async function getTemperatureData(timeFrame: TimeFrame = "monthly") {
+// Obtener temperatura desde NASA POWER
+export async function getTemperatureData(
+  timeFrame: TimeFrame = "monthly",
+  anio?: number,
+  mes?: string,
+) {
   try {
-    const { start, end } = getDateRange(timeFrame);
+    // 🔒 CANDADO DE SEGURIDAD TOPE 2025
+    if (timeFrame === "custom" && anio && anio >= 2026) {
+      return { average: [], max: [], min: [] };
+    }
+
+    const { start, end } = getDateRange(timeFrame, anio, mes);
 
     const url = `${NASA_POWER_API}/daily/point?parameters=T2M,T2M_MAX,T2M_MIN&community=RE&longitude=${APIZACO_LON}&latitude=${APIZACO_LAT}&start=${start}&end=${end}&format=JSON`;
 
@@ -120,7 +179,7 @@ export async function getTemperatureData(timeFrame: TimeFrame = "monthly") {
 // Procesar datos de irradiancia según el período
 function processIrradianceData(
   data: Record<string, number>,
-  timeFrame: TimeFrame
+  timeFrame: TimeFrame,
 ) {
   const entries = Object.entries(data).filter(([, value]) => value !== -999);
 
@@ -152,6 +211,12 @@ function processIrradianceData(
         y: Math.round(avg * 100) / 100,
       }));
 
+    case "custom":
+      return entries.map(([date, value]) => ({
+        x: formatDateLabel(date, "daily"),
+        y: Math.round(value * 100) / 100,
+      }));
+
     default:
       return entries.slice(-12).map(([date, value]) => ({
         x: formatDateLabel(date, "monthly"),
@@ -160,16 +225,20 @@ function processIrradianceData(
   }
 }
 
-// Procesar datos de temperatura
+// Procesar datos de temperatura de forma aislada e independiente
 function processTemperatureData(
   tempAvg: Record<string, number>,
   tempMax: Record<string, number> | undefined,
   tempMin: Record<string, number> | undefined,
-  timeFrame: TimeFrame
+  timeFrame: TimeFrame,
 ) {
   const avgEntries = Object.entries(tempAvg).filter(([, v]) => v !== -999);
-  const maxEntries = tempMax ? Object.entries(tempMax).filter(([, v]) => v !== -999) : [];
-  const minEntries = tempMin ? Object.entries(tempMin).filter(([, v]) => v !== -999) : [];
+  const maxEntries = tempMax
+    ? Object.entries(tempMax).filter(([, v]) => v !== -999)
+    : [];
+  const minEntries = tempMin
+    ? Object.entries(tempMin).filter(([, v]) => v !== -999)
+    : [];
 
   const processEntries = (entries: [string, number][]) => {
     switch (timeFrame) {
@@ -195,6 +264,11 @@ function processTemperatureData(
           x: label,
           y: Math.round(avg * 10) / 10,
         }));
+      case "custom":
+        return entries.map(([date, value]) => ({
+          x: formatDateLabel(date, "daily"),
+          y: Math.round(value * 10) / 10,
+        }));
       default:
         return entries.slice(-12).map(([date, value]) => ({
           x: formatDateLabel(date, "monthly"),
@@ -210,13 +284,26 @@ function processTemperatureData(
   };
 }
 
-// Funciones auxiliares de formateo y agregación
+// Funciones auxiliares de formateo
 function formatDateLabel(dateStr: string, type: string): string {
   const year = dateStr.substring(0, 4);
   const month = dateStr.substring(4, 6);
   const day = dateStr.substring(6, 8);
 
-  const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+  const monthNames = [
+    "Ene",
+    "Feb",
+    "Mar",
+    "Abr",
+    "May",
+    "Jun",
+    "Jul",
+    "Ago",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dic",
+  ];
 
   switch (type) {
     case "daily":
@@ -234,22 +321,39 @@ function aggregateByWeek(entries: [string, number][]) {
   const weeks: { [key: string]: number[] } = {};
 
   entries.forEach(([date, value]) => {
-    const d = new Date(`${date.substring(0, 4)}-${date.substring(4, 6)}-${date.substring(6, 8)}`);
+    const d = new Date(
+      `${date.substring(0, 4)}-${date.substring(4, 6)}-${date.substring(6, 8)}`,
+    );
     const weekNum = getWeekNumber(d);
     const key = `Sem ${weekNum}`;
     if (!weeks[key]) weeks[key] = [];
     weeks[key].push(value);
   });
 
-  return Object.entries(weeks).slice(-4).map(([label, values]) => ({
-    label,
-    avg: values.reduce((a, b) => a + b, 0) / values.length,
-  }));
+  return Object.entries(weeks)
+    .slice(-4)
+    .map(([label, values]) => ({
+      label,
+      avg: values.reduce((a, b) => a + b, 0) / values.length,
+    }));
 }
 
 function aggregateByMonth(entries: [string, number][]) {
   const months: { [key: string]: number[] } = {};
-  const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+  const monthNames = [
+    "Ene",
+    "Feb",
+    "Mar",
+    "Abr",
+    "May",
+    "Jun",
+    "Jul",
+    "Ago",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dic",
+  ];
 
   entries.forEach(([date, value]) => {
     const month = parseInt(date.substring(4, 6)) - 1;
@@ -313,7 +417,7 @@ function generateHourlyTempFromDaily(dailyAvg: number) {
   return hours;
 }
 
-// Datos mock en caso de fallo de API
+// MOCKS DE RESPALDO
 function generateMockIrradianceData(timeFrame: TimeFrame) {
   const mockData: { x: string; y: number }[] = [];
 
@@ -321,33 +425,58 @@ function generateMockIrradianceData(timeFrame: TimeFrame) {
     case "hourly":
       for (let i = 0; i < 24; i++) {
         let value = 0;
-        if (i >= 6 && i <= 18) {
-          value = 5 * Math.sin(((i - 6) / 12) * Math.PI);
-        }
-        mockData.push({ x: `${i.toString().padStart(2, "0")}:00`, y: Math.round(value * 100) / 100 });
+        if (i >= 6 && i <= 18) value = 5 * Math.sin(((i - 6) / 12) * Math.PI);
+        mockData.push({
+          x: `${i.toString().padStart(2, "0")}:00`,
+          y: Math.round(value * 100) / 100,
+        });
       }
       break;
     case "daily":
+    case "custom":
       const days = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
       days.forEach((day) => {
-        mockData.push({ x: day, y: Math.round((4 + Math.random() * 3) * 100) / 100 });
+        mockData.push({
+          x: day,
+          y: Math.round((4 + Math.random() * 3) * 100) / 100,
+        });
       });
       break;
     case "weekly":
-      for (let i = 1; i <= 4; i++) {
-        mockData.push({ x: `Sem ${i}`, y: Math.round((4.5 + Math.random() * 2) * 100) / 100 });
-      }
+      for (let i = 1; i <= 4; i++)
+        mockData.push({
+          x: `Sem ${i}`,
+          y: Math.round((4.5 + Math.random() * 2) * 100) / 100,
+        });
       break;
     case "monthly":
-      const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+      const months = [
+        "Ene",
+        "Feb",
+        "Mar",
+        "Abr",
+        "May",
+        "Jun",
+        "Jul",
+        "Ago",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dic",
+      ];
       months.forEach((month) => {
-        mockData.push({ x: month, y: Math.round((4 + Math.random() * 3) * 100) / 100 });
+        mockData.push({
+          x: month,
+          y: Math.round((4 + Math.random() * 3) * 100) / 100,
+        });
       });
       break;
     case "yearly":
-      for (let i = 2020; i <= 2024; i++) {
-        mockData.push({ x: i.toString(), y: Math.round((5 + Math.random() * 1) * 100) / 100 });
-      }
+      for (let i = 2021; i <= 2025; i++)
+        mockData.push({
+          x: i.toString(),
+          y: Math.round((5 + Math.random() * 1) * 100) / 100,
+        });
       break;
   }
 
@@ -362,31 +491,66 @@ function generateMockTemperatureData(timeFrame: TimeFrame) {
       case "hourly":
         for (let i = 0; i < 24; i++) {
           const variation = 5 * Math.sin(((i - 6) / 24) * 2 * Math.PI);
-          data.push({ x: `${i.toString().padStart(2, "0")}:00`, y: Math.round((18 + variation) * 10) / 10 });
+          data.push({
+            x: `${i.toString().padStart(2, "0")}:00`,
+            y: Math.round((18 + variation) * 10) / 10,
+          });
         }
         break;
       case "daily":
-        const days = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+      case "custom":
+        const days = [
+          "01/12",
+          "02/12",
+          "03/12",
+          "04/12",
+          "05/12",
+          "06/12",
+          "07/12",
+        ];
         days.forEach((day) => {
-          data.push({ x: day, y: Math.round((15 + Math.random() * 10) * 10) / 10 });
+          data.push({
+            x: day,
+            y: Math.round((15 + Math.random() * 10) * 10) / 10,
+          });
         });
         break;
       case "weekly":
-        for (let i = 1; i <= 4; i++) {
-          data.push({ x: `Sem ${i}`, y: Math.round((16 + Math.random() * 6) * 10) / 10 });
-        }
+        for (let i = 1; i <= 4; i++)
+          data.push({
+            x: `Sem ${i}`,
+            y: Math.round((16 + Math.random() * 6) * 10) / 10,
+          });
         break;
       case "monthly":
-        const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+        const months = [
+          "Ene",
+          "Feb",
+          "Mar",
+          "Abr",
+          "May",
+          "Jun",
+          "Jul",
+          "Ago",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dic",
+        ];
         const baseTemps = [12, 14, 16, 18, 20, 19, 18, 18, 17, 15, 13, 12];
         months.forEach((month, i) => {
-          data.push({ x: month, y: baseTemps[i] + Math.round(Math.random() * 2 * 10) / 10 });
+          data.push({
+            x: month,
+            y: baseTemps[i] + Math.round(Math.random() * 2 * 10) / 10,
+          });
         });
         break;
       case "yearly":
-        for (let i = 2020; i <= 2024; i++) {
-          data.push({ x: i.toString(), y: Math.round((16 + Math.random() * 2) * 10) / 10 });
-        }
+        for (let i = 2021; i <= 2025; i++)
+          data.push({
+            x: i.toString(),
+            y: Math.round((16 + Math.random() * 2) * 10) / 10,
+          });
         break;
     }
 
@@ -399,11 +563,11 @@ function generateMockTemperatureData(timeFrame: TimeFrame) {
 
   return { average: avg, max, min };
 }
+
 export async function getCloudCoverData(timeFrame: TimeFrame = "monthly") {
   try {
     const { start, end } = getDateRange(timeFrame);
 
-    // CLOUD_AMT = Cloud Amount/Coverage (%)
     const url = `${NASA_POWER_API}/daily/point?parameters=CLOUD_AMT&community=RE&longitude=${APIZACO_LON}&latitude=${APIZACO_LAT}&start=${start}&end=${end}&format=JSON`;
 
     const response = await fetch(url, { next: { revalidate: 3600 } });
@@ -427,48 +591,64 @@ export async function getCloudCoverData(timeFrame: TimeFrame = "monthly") {
   }
 }
 
-// Procesar datos de nubosidad
 function processCloudData(data: Record<string, number>, timeFrame: TimeFrame) {
   const entries = Object.entries(data).filter(([, value]) => value !== -999);
 
-  // Categorizar nubosidad: Despejado (0-25%), Parcial (25-50%), Nublado (50-75%), Muy Nublado (75-100%)
   const categories = {
-    "Despejado": 0,
+    Despejado: 0,
     "Parcialmente Nublado": 0,
-    "Nublado": 0,
-    "Muy Nublado": 0
+    Nublado: 0,
+    "Muy Nublado": 0,
   };
 
   entries.forEach(([, value]) => {
-    if (value <= 25) {
-      categories["Despejado"]++;
-    } else if (value <= 50) {
-      categories["Parcialmente Nublado"]++;
-    } else if (value <= 75) {
-      categories["Nublado"]++;
-    } else {
-      categories["Muy Nublado"]++;
-    }
+    if (value <= 25) categories["Despejado"]++;
+    else if (value <= 50) categories["Parcialmente Nublado"]++;
+    else if (value <= 75) categories["Nublado"]++;
+    else categories["Muy Nublado"]++;
   });
 
   const total = entries.length;
 
   return [
-    { name: "Despejado", percentage: categories["Despejado"] / total, amount: categories["Despejado"] },
-    { name: "Parcial", percentage: categories["Parcialmente Nublado"] / total, amount: categories["Parcialmente Nublado"] },
-    { name: "Nublado", percentage: categories["Nublado"] / total, amount: categories["Nublado"] },
-    { name: "Muy Nublado", percentage: categories["Muy Nublado"] / total, amount: categories["Muy Nublado"] },
+    {
+      name: "Despejado",
+      percentage: categories["Despejado"] / total,
+      amount: categories["Despejado"],
+    },
+    {
+      name: "Parcial",
+      percentage: categories["Parcialmente Nublado"] / total,
+      amount: categories["Parcialmente Nublado"],
+    },
+    {
+      name: "Nublado",
+      percentage: categories["Nublado"] / total,
+      amount: categories["Nublado"],
+    },
+    {
+      name: "Muy Nublado",
+      percentage: categories["Muy Nublado"] / total,
+      amount: categories["Muy Nublado"],
+    },
   ];
 }
 
-// Datos mock de nubosidad
 function generateMockCloudData(timeFrame: TimeFrame) {
   const multiplier = timeFrame === "yearly" ? 12 : 1;
 
   return [
-    { name: "Despejado", percentage: 0.35, amount: Math.round(35 * multiplier) },
-    { name: "Parcial", percentage: 0.30, amount: Math.round(30 * multiplier) },
+    {
+      name: "Despejado",
+      percentage: 0.35,
+      amount: Math.round(35 * multiplier),
+    },
+    { name: "Parcial", percentage: 0.3, amount: Math.round(30 * multiplier) },
     { name: "Nublado", percentage: 0.25, amount: Math.round(25 * multiplier) },
-    { name: "Muy Nublado", percentage: 0.10, amount: Math.round(10 * multiplier) },
+    {
+      name: "Muy Nublado",
+      percentage: 0.1,
+      amount: Math.round(10 * multiplier),
+    },
   ];
 }

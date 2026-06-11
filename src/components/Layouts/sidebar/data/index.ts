@@ -1,8 +1,25 @@
 import * as Icons from "../icons";
 
-export const NAV_DATA = [
+interface NavSubItem {
+  title: string;
+  url: string;
+}
+
+interface NavItem {
+  title: string;
+  url?: string;
+  icon: any;
+  items: NavSubItem[];
+}
+
+interface NavSection {
+  label: string;
+  items: NavItem[];
+}
+
+export const NAV_DATA: NavSection[] = [
   {
-    label: "MAIN MENU",
+    label: "",
     items: [
       {
         title: "Dashboard",
@@ -16,41 +33,18 @@ export const NAV_DATA = [
         icon: Icons.Calendar,
         items: [],
       },
-
       {
         title: "Mejores momentos",
+        url: "/charts/basic-chart",
         icon: Icons.PieChart,
-        items: [
-          {
-            title: "Basic Chart",
-            url: "/charts/basic-chart",
-          },
-        ],
+        items: [],
       },
       {
         title: "Glosario",
+        url: "/ui-elements/alerts",
         icon: Icons.FourCircle,
-        items: [
-          {
-            title: "Alerts",
-            url: "/ui-elements/alerts",
-          },
-          {
-            title: "Buttons",
-            url: "/ui-elements/buttons",
-          },
-        ],
+        items: [],
       },
-      /*{
-        title: "Authentication",
-        icon: Icons.Authentication,
-        items: [
-          {
-            title: "Sign In",
-            url: "/auth/sign-in",
-          },
-        ],
-      },*/
     ],
   },
 ];

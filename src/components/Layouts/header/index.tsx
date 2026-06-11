@@ -21,13 +21,14 @@ export function Header() {
       </button>
 
       {isMobile && (
-        <Link href={"/SCAR.png"} className="ml-2 max-[430px]:hidden min-[375px]:ml-4">
+        <Link href="/" className="ml-2 max-[430px]:hidden min-[375px]:ml-4">
           <Image
-            src={"/"}
+            src="/SCAR.png" // <--- CAMBIA ESTO: apuntando a tu nueva imagen en /public
             width={32}
             height={32}
-            alt=""
+            alt="Logo Búho" // También es buena idea actualizar el texto alternativo
             role="presentation"
+            priority // Añadido para que el logo cargue más rápido
           />
         </Link>
       )}
