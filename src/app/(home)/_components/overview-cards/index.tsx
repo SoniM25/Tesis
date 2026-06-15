@@ -9,7 +9,7 @@ export async function OverviewCardsGroup() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-4 2xl:gap-7.5">
       <OverviewCard
-        label="17/04/2026"
+        label="11/06/2026"
         data={{
           value: "Fecha",
           growthRate: 0,

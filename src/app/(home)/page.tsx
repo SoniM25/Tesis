@@ -2,13 +2,11 @@ import { IrradianceOverview } from "@/components/Charts/irradiance-chart";
 import { TemperatureOverview } from "@/components/Charts/temperature-chart";
 import { CloudCover } from "@/components/Charts/cloud-cover";
 import { MexicoMap } from "@/components/Charts/mexico-map";
-import { TopChannels } from "@/components/Tables/top-channels";
-import { TopChannelsSkeleton } from "@/components/Tables/top-channels/skeleton";
 import { createTimeFrameExtractor } from "@/utils/timeframe-extractor";
 import { Suspense } from "react";
-import { ChatsCard } from "./_components/chats-card";
 import { OverviewCardsGroup } from "./_components/overview-cards";
 import { OverviewCardsSkeleton } from "./_components/overview-cards/skeleton";
+import { PosicionSolOverview } from "@/components/Charts/posicion-sol/chart";
 
 type PropsType = {
   searchParams: Promise<{
@@ -19,6 +17,10 @@ type PropsType = {
 export default async function Home({ searchParams }: PropsType) {
   const { selected_time_frame } = await searchParams;
   const extractTimeFrame = createTimeFrameExtractor(selected_time_frame);
+
+  // 🛠️ SOLUCCIÓN: Extraemos el timeFrame para el componente solar con un fallback seguro
+  const solarTimeFrame =
+    extractTimeFrame("posicion_sol")?.split(":")[1] || "monthly";
 
   return (
     <>
@@ -31,14 +33,15 @@ export default async function Home({ searchParams }: PropsType) {
           className="col-span-12 xl:col-span-7"
           key={extractTimeFrame("irradiance_overview")}
           timeFrame={
-            extractTimeFrame("irradiance_overview")?.split(":")[1] || "monthly"
+            (extractTimeFrame("irradiance_overview")?.split(":")[1] ||
+              "monthly") as any
           }
         />
 
+        {/* ✅ SOLUCCIÓN: Extraemos el timeFrame de temperatura usando tu extractor y se lo pasamos limpio */}
         <TemperatureOverview
-          key={extractTimeFrame("temperature_overview")}
           timeFrame={
-            extractTimeFrame("temperature_overview")?.split(":")[1] || "monthly"
+            (extractTimeFrame("temperature_overview")?.split(":")[1] || "monthly") as any
           }
           className="col-span-12 xl:col-span-5"
         />
@@ -47,21 +50,16 @@ export default async function Home({ searchParams }: PropsType) {
           className="col-span-12 xl:col-span-5"
           key={extractTimeFrame("cloud_cover")}
           timeFrame={
-            extractTimeFrame("cloud_cover")?.split(":")[1] || "monthly"
+            (extractTimeFrame("cloud_cover")?.split(":")[1] || "monthly") as any
           }
         />
 
         <MexicoMap />
 
-        <div className="col-span-12 grid xl:col-span-8">
-          <Suspense fallback={<TopChannelsSkeleton />}>
-            <TopChannels />
-          </Suspense>
+        {/* ☀️ Módulo de Ángulo Central de la Posición del Sol ocupando la fila inferior */}
+        <div className="col-span-12">
+          <PosicionSolOverview timeFrame={solarTimeFrame} />
         </div>
-
-        <Suspense fallback={null}>
-          <ChatsCard />
-        </Suspense>
       </div>
     </>
   );

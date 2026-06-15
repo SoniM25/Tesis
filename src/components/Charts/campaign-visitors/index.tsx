@@ -1,11 +1,35 @@
+"use client";
+
 import { TrendingUpIcon } from "@/assets/icons";
 import { compactFormat } from "@/lib/format-number";
 import { cn } from "@/lib/utils";
-import { getCampaignVisitorsData } from "@/services/charts.services";
 import { CampaignVisitorsChart } from "./chart";
 
-export async function CampaignVisitors({ className }: { className?: string }) {
-  const data = await getCampaignVisitorsData();
+// 1. Definimos las Props para que reciba la información desde el componente padre
+interface CampaignVisitorsProps {
+  className?: string;
+  data: {
+    total_visitors: number;
+    performance: number;
+    chart: any; // Ajusta este tipo según la estructura de tu gráfica
+  } | null;
+}
+
+// Importante quitar el async porque si no no funciona jajaja
+export function CampaignVisitors({ className, data }: CampaignVisitorsProps) {
+  // Si los datos aún se están cargando en el componente padre, mostramos un estado temporal
+  if (!data) {
+    return (
+      <div
+        className={cn(
+          "rounded-[0px] bg-white p-6 shadow-1 dark:bg-gray-dark dark:shadow-card",
+          className,
+        )}
+      >
+
+      </div>
+    );
+  }
 
   return (
     <div

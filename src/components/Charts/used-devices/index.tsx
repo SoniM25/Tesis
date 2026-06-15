@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { PeriodPicker } from "@/components/period-picker";
 import { cn } from "@/lib/utils";
 import { getDevicesUsedData } from "@/services/charts.services";
@@ -8,30 +11,30 @@ type PropsType = {
   className?: string;
 };
 
-export async function UsedDevices({
-  timeFrame = "monthly",
-  className,
-}: PropsType) {
-  const data = await getDevicesUsedData(timeFrame);
+// ✅ CORRECCIÓN: Función síncrona normal para Client Component
+export function UsedDevices({
+                              timeFrame = "monthly", // Usamos el valor por defecto en inglés alineado a tu app
+                              className,
+                            }: PropsType) {
+  // 1. Estados para controlar los datos y la carga
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  return (
-    <div
-      className={cn(
-        "grid grid-cols-1 grid-rows-[auto_1fr] gap-9 rounded-[10px] bg-white p-7.5 shadow-1 dark:bg-gray-dark dark:shadow-card",
-        className,
-      )}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="text-body-2xlg font-bold text-dark dark:text-white">
-          Used Devices
-        </h2>
+  // 2. Efecto para hacer la petición asíncrona de manera segura
+  useEffect(() => {
+    async function fetchDevices() {
+      setLoading(true);
+      try {
+        const result = await getDevicesUsedData(timeFrame);
+        setData(result);
+      } catch (error) {
+        console.error("Error al obtener dispositivos utilizados:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchDevices();
+  }, [timeFrame]);
 
-        <PeriodPicker defaultValue={timeFrame} sectionKey="used_devices" />
-      </div>
 
-      <div className="grid place-items-center">
-        <DonutChart data={data} />
-      </div>
-    </div>
-  );
 }
